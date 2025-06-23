@@ -1,0 +1,324 @@
+{
+  "tabs": [
+    {
+      "name": "create_apikey_json",
+      "config": {
+        "work_dir": "create_apikey_json",
+        "main_cmd": "bash write_apikey.sh",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "",
+            "value": "put_your_api_key_here",
+            "options": []
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "../a_qwen_cli",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "",
+            "value": "",
+            "options": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "qwen-long",
+      "config": {
+        "work_dir": "a_qwen_cli",
+        "main_cmd": "bash qwen",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "-m",
+            "value": "qwen-long-2025-01-25",
+            "options": [
+              "qwen-long-2025-01-25",
+              "qwen-vl-max",
+              "qwen-long-latest",
+              "qwen-turbo-latest",
+              "qwen-max-latest"
+            ]
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "",
+            "options": [
+              "test",
+              "test1",
+              "test2"
+            ]
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "/Users/louiewong/Downloads/a li.docx",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "-md",
+            "value": "/Users/louiewong/Library/Mobile Documents/iCloud~md~obsidian/Documents/ObsidianVault/llm_ref",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "-dq",
+            "value": "结构化的总结这些文件\n每个文件不超过200字",
+            "options": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "qwen-vl",
+      "config": {
+        "work_dir": "a_qwen_cli",
+        "main_cmd": "bash qwen",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "-m",
+            "value": "qwen-vl-max",
+            "options": [
+              "qwen-long-2025-01-25",
+              "qwen-vl-max",
+              "qwen-long-latest",
+              "qwen-turbo-latest",
+              "qwen-max-latest"
+            ]
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "/Users/louiewong/Downloads/ComfyUI_00212_.png",
+            "options": [
+              "图片文件 (*.png *.jpg *.jpeg *.gif)",
+              "所有文件 (*)"
+            ]
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "/Users/louiewong/Downloads/ComfyUI_00213_.png",
+            "options": [
+              "图片文件 (*.png *.jpg *.jpeg *.gif)",
+              "所有文件 (*)"
+            ]
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "-dq",
+            "value": "这些图有什么异同之处",
+            "options": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "qwen-turbo",
+      "config": {
+        "work_dir": "a_qwen_cli",
+        "main_cmd": "bash qwen",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "-m",
+            "value": "qwen-turbo-latest",
+            "options": [
+              "qwen-long-2025-01-25",
+              "qwen-vl-max",
+              "qwen-long-latest",
+              "qwen-turbo-latest",
+              "qwen-max-latest"
+            ]
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "-dq",
+            "value": "讲个100字的笑话",
+            "options": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "win_ping",
+      "config": {
+        "work_dir": "",
+        "main_cmd": "ping",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "-l",
+            "value": "1024",
+            "options": []
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "t.cn",
+            "options": []
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "",
+            "value": "",
+            "options": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "mac_ping6",
+      "config": {
+        "work_dir": "",
+        "main_cmd": "ping6",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "-c",
+            "value": "5",
+            "options": []
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "ipw.cn",
+            "options": []
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "",
+            "value": "",
+            "options": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "new",
+      "config": {
+        "work_dir": "a_qwen_cli",
+        "main_cmd": "bash qwen",
+        "rows": [
+          {
+            "type": "开关",
+            "key": "-m",
+            "value": "qwen-long-2025-01-25",
+            "options": [
+              "qwen-long-2025-01-25",
+              "qwen-vl-max",
+              "qwen-long-latest",
+              "qwen-turbo-latest",
+              "qwen-max-latest"
+            ]
+          },
+          {
+            "type": "开关",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文件",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "目录",
+            "key": "",
+            "value": "",
+            "options": []
+          },
+          {
+            "type": "文本",
+            "key": "-dq",
+            "value": "讲个笑话",
+            "options": []
+          }
+        ]
+      }
+    }
+  ],
+  "last_selected_tab": 0
+}

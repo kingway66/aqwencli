@@ -1,0 +1,252 @@
+#!/bin/bash
+
+# 启用严格模式
+set -e  # 遇到错误立即退出
+set -u  # 使用未初始化变量时报错
+#set -x
+set -o pipefail
+
+# 配置参数
+API_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+MAX_RETRIES=2
+STREAM_MODE=true
+DEFAULT_MODEL="qwen-long-2025-01-25"
+CURRENT_MODEL="$DEFAULT_MODEL"
+
+# 获取当前脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/log_dir"
+
+
+CONFIG_JSON="$SCRIPT_DIR/config.json"
+APIKEY_JSON="$SCRIPT_DIR/apikey.json"
+# 添加缓存相关的全局变量
+CACHE_FILE="$SCRIPT_DIR/qwenlong_cache.json"
+
+MARKDOWN_PATH=""
+
+# ======================
+# = 日志输出开关配置 =
+# ======================
+LOG_ENABLE=true
+LOG_DEBUG=false
+LOG_INFO=true
+LOG_WARN=true
+LOG_ERROR=true
+LOG_FILE=""  # 设置为某个路径则输出到文件，例如 "/tmp/myapp.log"
+
+#source utils.sh
+#source filetools.sh
+#source chatapi.sh
+#source batch.sh
+
+
+# 加载同目录下的 utils.sh
+source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/filetools.sh"
+source "$SCRIPT_DIR/chatapi.sh"
+source "$SCRIPT_DIR/batch.sh"
+
+# 从 config.json 中读取 API key 和模型配置
+if [ -f "$CONFIG_JSON" ]; then
+    DASHSCOPE_API_KEY=$(jq -r '.api_key' "$APIKEY_JSON"|base64 --decode)
+    MODEL_CONFIG=$(jq '{ "qwen-long": .["qwen-long"], "qwen-turbo": .["qwen-turbo"], "qwen-turbo-latest": .["qwen-turbo-latest"], "qwen-plus": .["qwen-plus"] }' "$CONFIG_JSON")
+
+    if [ -z "$DASHSCOPE_API_KEY" ]; then
+        error "错误: 无法从 $APIKEY_JSON 中读取 api_key"
+        exit 1
+    fi
+else
+    error "错误: 未找到配置文件 $APIKEY_JSON"
+    exit 1
+fi
+
+# 创建日志目录
+mkdir -p "$LOG_DIR"
+
+
+check_dependencies
+
+
+check_xxhash
+
+
+# 解析命令行参数
+parse_args() {
+    # 数组字符串json
+    local files='[]'
+    local question=""
+    local model="$DEFAULT_MODEL"
+    local has_cleanup=0
+    local batch_file=""
+    local endpoint="/v1/chat/completions"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -m|--model)
+                model="$2"
+                shift 2
+                ;;
+            -md)
+                MARKDOWN_PATH="$2"
+		shift 2
+ 		;;
+	    -dq)
+		question=$(echo "$2" | base64 --decode)
+		shift 2
+		;;
+            -l|--list)
+                files_from_list="$2"
+                shift 2
+                ;;
+            -h|--help)
+                cat readme.md
+                exit 0
+                ;;
+            --debuglevel)
+		if [[ $2 == 1 ]];then
+		    LOG_DEBUG=true
+                fi
+		shift 2
+		;;
+            --cleanup)
+                has_cleanup=1
+                shift
+                ;;
+            --batch)
+                has_batch=1
+	            batch_file="$2"
+                info "got batch file: $batch_file"
+                shift 2
+                ;;                
+            --runbatch)
+                batch_file="$2"
+                run_batch $batch_file
+                exit 0
+                ;;
+            --outputbatch)
+                batch_file="$2"
+                output_batch $batch_file
+                exit 0
+                ;;
+            
+            *)
+                if [ -f "$1" ]; then
+                    files=$(add_file_to_array "$files" "$1")
+                elif [ -d "$1" ]; then
+                    if [[ $model  == qwen* || $model == batch-test-model ]];then
+                        local add_files=$(find_with_exts "$1" pdf docx txt xls doc xlsx ppt pptx png jpg jpeg gif)
+                        files=$(add_array_to_array "$files" "$add_files")
+                    elif [[ $model == qwen-turbo* ]];then
+                        for i in $(find_with_exts $1 pdf txt);do
+                            files+=("$i")
+                        done
+                    else
+                        for i in $(find -type f -name "*.txt" );do
+                            files+=("$i")
+                        done
+                    fi 
+
+                else
+                    question="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+
+ 
+endpoint=$(get_endpoint_by_model "$model")
+
+
+  # 如果没有命令行 prompt，则从 stdin 读取
+  # 即允许 cat prompt.txt|a008t2.sh 这样操作
+    if [ -z "${question:-}" ]; then
+        if [ -t 0 ]; then
+            warn "❌ 没有提供任何 prompt 输入"
+            exit 1
+        else
+            question=$(cat)
+        fi  
+    fi
+
+    if [ "$batch_file" ]; then
+    	info "正在创建 batch 文件: $batch_file"
+        next_id=$(get_next_custom_id "$batch_file")
+        debug "next_id1: $next_id"
+        body_json=$(chat_with_files "$files" "$question" "$model" "dryrun_messages")
+        debug "dryrun_messages1: $body_json"
+    	item="$(construct_batch_item "$next_id" "$endpoint" "$body_json")"
+        debug "item1: $item"
+        debug "$item" >> "$batch_file"
+        info "✅ 已为该文件创建 batch 任务: $batch_file"
+        exit 0
+    fi
+
+  # 处理cleanup
+    if [ $has_cleanup -eq 1 ]; then
+        read -p "⚠️ 请注意：即将开始清理服务器上的孤立文件，所有当前命令中不包含的文件将被清除，服务器上没有的文件将被上传。输入 yes2 并回车 开始清理: " user_input
+        if [[ "$user_input" != "yes2" ]]; then
+            warn "❌ 清理已取消"
+            exit 1
+        fi
+       
+        # 传参时一定要加引号 
+        cleanup_orphaned_files "$(chat_with_files "$files" "$question" "$model" "dryrun_files")"
+        exit 0
+    fi
+
+
+
+    debug "go to chatwithfiles $files $question $model"
+    # 运行核心函数
+    chat_with_files "$files" "$question" "$model"
+
+}
+
+
+# 检查是否要调用 qwenvl.sh 的函数
+# 临时这样用，将来再整合
+check_and_call_vl() {
+    local model=""
+    local parse_model=false
+
+    # 遍历所有参数
+    for arg in "$@"; do
+        if [[ $arg == -m || $arg == --model ]]; then
+            parse_model=true
+            continue
+        fi
+
+        if [[ "$parse_model" == true ]]; then
+            model="$arg"
+            if [[ "$model" == qwen-vl* ]]; then
+                debug "Redirecting to qwenvl.sh with model: $model"
+                exec bash "$SCRIPT_DIR/qwenvl.sh" "$@"
+                return 0
+            fi
+            parse_model=false
+        fi
+    done
+    debug "no need to call qwenvl.sh"
+    return 1  # 表示不需要跳转
+}
+
+main() {
+    check_dependencies
+    #cleanup_cache
+    
+    if [ $# -eq 0 ]; then
+        cat "$SCRIPT_DIR/readme.md"
+    else
+        #info "$@"
+        if ! check_and_call_vl "$@"; then
+            debug "Continuing with long mode..."
+            parse_args "$@"
+        # 其他 long 模式逻辑
+        fi
+    fi
+}
+
+main "$@"

@@ -462,129 +462,14 @@ class TabPage(QWidget):
             QMessageBox.critical(self, "错误", str(e))
 
 
-    def execute_command6(self):
-        """在新终端窗口中执行命令"""
-        try:
-            command = self.build_command_to_exec()
-            work_dir = self.work_dir.text().strip()
-            
-            if sys.platform == "darwin":  # macOS
-                # 构建完整的命令脚本
-                if work_dir:
-                    full_command = f'cd "{work_dir}" && {command}'
-                else:
-                    full_command = command
-                
-                # 创建 AppleScript 来打开新的终端窗口并执行命令
-                applescript = f'''
-    tell application "Terminal"
-        activate
-        do script "{full_command}; echo ''; echo 'Press any key to close...'; read -n 1"
-    end tell
-                '''
-                
-                # 执行 AppleScript
-                subprocess.run(['osascript', '-e', applescript])
-                
-            elif sys.platform == "win32":
-                # Windows 系统
-                if work_dir:
-                    script_content = f'cd /d "{work_dir}" && {command} && pause'
-                else:
-                    script_content = f'{command} && pause'
-                subprocess.Popen(['cmd', '/c', 'start', 'cmd', '/k', script_content], shell=True)
-                
-            else:
-                # Linux 系统
-                if work_dir:
-                    script_content = f'cd "{work_dir}" && {command}'
-                else:
-                    script_content = command
-                    
-                # 尝试不同的终端
-                terminals = [
-                    ('gnome-terminal', ['--', 'bash', '-c', f'{script_content}; read -p "Press Enter to close..."']),
-                    ('konsole', ['-e', 'bash', '-c', f'{script_content}; read -p "Press Enter to close..."']),
-                    ('xterm', ['-e', 'bash', '-c', f'{script_content}; read -p "Press Enter to close..."']),
-                    ('x-terminal-emulator', ['-e', 'bash', '-c', f'{script_content}; read -p "Press Enter to close..."'])
-                ]
-                
-                terminal_opened = False
-                for terminal, args in terminals:
-                    try:
-                        subprocess.Popen([terminal] + args)
-                        terminal_opened = True
-                        break
-                    except FileNotFoundError:
-                        continue
-                
-                if not terminal_opened:
-                    QMessageBox.warning(self, "警告", "未找到可用的终端程序")
-                    return
-            
-            QMessageBox.information(self, "执行", "命令已在新终端窗口中启动")
-            
-        except Exception as e:
-            QMessageBox.critical(self, "执行失败", str(e))
-
-
-    def execute_command3(self):
-        """在新终端窗口中执行命令"""
-        try:
-            command = self.build_command_to_exec()
-            work_dir = self.work_dir.text().strip()
-            
-            # 构建完整的命令脚本
-            if work_dir:
-                if sys.platform == "win32":
-                    # Windows 系统 - 在新的 cmd 窗口中执行
-                    script_content = f'cd /d "{work_dir}" && {command} && pause'
-                    subprocess.Popen(['cmd', '/c', 'start', 'cmd', '/k', script_content], shell=True)
-                else:
-                    # Unix/Linux/macOS 系统 - 在新的终端窗口中执行
-                    script_content = f'cd "{work_dir}" && {command}'
-                    # 尝试不同的终端
-                    terminals = ['gnome-terminal', 'konsole', 'xterm', 'Terminal']
-                    for terminal in terminals:
-                        try:
-                            if terminal == 'gnome-terminal':
-                                subprocess.Popen([terminal, '--', 'bash', '-c', f'{script_content}; read -p "Press Enter to close..."'])
-                            elif terminal == 'Terminal':  # macOS
-                                subprocess.Popen(['open', '-a', 'Terminal', '--args', '-c', f'{script_content}; read -p "Press Enter to close..."'])
-                            else:
-                                subprocess.Popen([terminal, '-e', f'bash -c "{script_content}; read -p \\"Press Enter to close...\\""'])
-                            break
-                        except FileNotFoundError:
-                            continue
-            else:
-                if sys.platform == "win32":
-                    subprocess.Popen(['cmd', '/c', 'start', 'cmd', '/k', f'{command} && pause'], shell=True)
-                else:
-                    terminals = ['gnome-terminal', 'konsole', 'xterm', 'Terminal']
-                    for terminal in terminals:
-                        try:
-                            if terminal == 'gnome-terminal':
-                                subprocess.Popen([terminal, '--', 'bash', '-c', f'{command}; read -p "Press Enter to close..."'])
-                            elif terminal == 'Terminal':  # macOS
-                                subprocess.Popen(['open', '-a', 'Terminal', '--args', '-c', f'{command}; read -p "Press Enter to close..."'])
-                            else:
-                                subprocess.Popen([terminal, '-e', f'bash -c "{command}; read -p \\"Press Enter to close...\\""'])
-                            break
-                        except FileNotFoundError:
-                            continue
-            
-            QMessageBox.information(self, "执行", "命令已在新终端窗口中启动")
-            
-        except Exception as e:
-            QMessageBox.critical(self, "执行失败", str(e))
-
 
     def execute_command(self):
-        """在当前终端中执行命令"""
+        """在当前终端中以非阻塞方式执行命令"""
         try:
+            # 获取命令和工作目录
             command = self.build_command_to_exec()
             work_dir = self.work_dir.text().strip()
-            
+
             # 构建完整的命令脚本
             if work_dir:
                 if sys.platform == "win32":
@@ -592,27 +477,36 @@ class TabPage(QWidget):
                     script_content = f'cd /d "{work_dir}" && {command}'
                     print(f'> cd /d "{work_dir}"')
                     print(f'> {command}')
+                    
+                    # 使用 start /B cmd /c 实现非阻塞执行
+                    full_command = f'start /B cmd /c "{script_content}"'
                 else:
                     # Unix/Linux/macOS 系统
                     script_content = f'cd "{work_dir}" && {command}'
                     print(f'> cd "{work_dir}"')
                     print(f'> {command}')
+                    
+                    # 直接使用 subprocess.Popen
+                    full_command = script_content
             else:
                 script_content = command
                 print(f'> {command}')
-            
-            # 在当前终端执行命令
-            if sys.platform == "win32":
-                # Windows 系统使用 cmd
-                os.system(script_content)
-            else:
-                # Unix/Linux/macOS 系统
-                os.system(script_content)
-            
-            print("命令执行完成")
+                
+                if sys.platform == "win32":
+                    # Windows 系统
+                    full_command = f'start /B cmd /c "{script_content}"'
+                else:
+                    # Unix/Linux/macOS 系统
+                    full_command = script_content
+
+            # 在后台执行命令（非阻塞）
+            process = subprocess.Popen(full_command, shell=True)
+            print("命令已启动（后台运行）")
             
         except Exception as e:
             QMessageBox.critical(self, "执行失败", str(e))
+
+
 
     def reset_current_tab(self):
         # 清空现有行

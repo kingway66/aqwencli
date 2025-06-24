@@ -10,6 +10,7 @@
 # 忽略特定目录
 /secrets/
 /node_modules/
+apikey.json
 
 # 忽略操作系统生成的文件
 .DS_Store
